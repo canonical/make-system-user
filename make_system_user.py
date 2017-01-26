@@ -20,24 +20,29 @@ VERSION = '0.1'
 def parseargs(argv=None):
     parser = argparse.ArgumentParser(
         prog=PROGRAM,
-        description=('Create a self-signed system-user assertion.'),
+        description=('Create a self-signed system-user assertion using a local snapcraft key that has been registered with an Ubuntu SSO account.'),
         )
-    parser.add_argument(
-        '-v', '--version'
+    parser.add_argument('-v', '--verbose', dest='verbose', action='store_true'
         )
-    parser.add_argument('-b', '--brand', required=True
+    required = parser.add_argument_group('Required arguments')
+    required.add_argument('-b', '--brand', required=True,
+        help=('The account-id of the account that signed the device\'s model-assertion.')
         )
-    parser.add_argument('-m', '--model', required=True
+    required.add_argument('-m', '--model', required=True,
+        help=('The model listed in the  device\'s model-assertion.')
         )
-    parser.add_argument('-u', '--username', required=True
+    required.add_argument('-u', '--username', required=True,
+        help=('The username of the account to be created on the device')
         )
-    parser.add_argument('-p', '--password', required=True
+    required.add_argument('-p', '--password', required=True,
+        help=('The password of the account to be created on the device.i This password is not saved')
         )
-    parser.add_argument('-k', '--key', required=True
+    required.add_argument('-k', '--key', required=True,
+        help=('The name of the snapcraft key to use to sign the system user assertion. The key must exist locally and be reported by "snapcraft keys". The key must also be registered.')
         )
-    parser.add_argument('-l', '--keypword', required=True
+    required.add_argument('-l', '--keypword', required=True,
+        help=('The password of the snapcraft key used to sign the system-user assertion. This is not saved.')
         )
-        #help=('The account-id of the SSO account the self-signing key is registered to. See https://myapps.developer.ubuntu.com/dev/account/'))
     args = parser.parse_args()
     return args
 
@@ -120,7 +125,6 @@ def signUser(userJson, key, pwd):
     signed = str(res,'utf-8')
     return(signed)
 
-
 def main(argv=None):
     args = parseargs(argv)
     # quit if not snapcraft logged in
@@ -132,35 +136,45 @@ def main(argv=None):
     if not selfSignKey:
         sys.exit(1)
 
-    print("Version: ", VERSION)
-    print("Brand ", args.brand)
-    print("Model", args.model)
-    print("Username", args.username)
-    print("Password", args.password)
-    print("Password hash", pword_hash(args.password))
-    print("Account-Id: ", account)
-    print("Key: ", args.key)
-    print("Key Fingerprint: ", selfSignKey)
-    print("Key pword: ", args.keypword)
+    if args.verbose:
+        print("Version: ", VERSION)
+        print("Brand ", args.brand)
+        print("Model", args.model)
+        print("Username", args.username)
+        print("Password", args.password)
+        print("Password hash", pword_hash(args.password))
+        print("Account-Id: ", account)
+        print("Key: ", args.key)
+        print("Key Fingerprint: ", selfSignKey)
+        print("Key pword: ", args.keypword)
 
     accountSigned = accountAssert(account) 
-    #print(accountSigned)
+    if args.verbose:
+        print("Account signed:")
+        print(accountSigned)
+
     accountKeySigned = accountKeyAssert(selfSignKey) 
-    #print(accountKeySigned)
+    if args.verbose:
+        print("Account Key signed:")
+        print(accountKeySigned)
     
     userJson = systemUserJson(account, args.brand, args.model, args.username, pword_hash(args.password))
-    print(json.dumps(userJson))
+    if args.verbose:
+        print("system-user json:")
+        print(json.dumps(userJson))
     
     userSigned = signUser(userJson, args.key, args.keypword)
-    #userSigned = signUser(json.dumps(userJson), args.key, args.keypword)
 
     user = accountSigned + "\n" + accountKeySigned + "\n" + userSigned
+    if args.verbose:
+        print("system-user signed:")
+        print(user)
 
     filename = "auto-import.assert"
     with open(filename, 'w') as out:
         out.write(user)
 
-
+    print("Done. You may copy {} to a USB stick and insert it into an unmanaged Core system, after which you can log in using the username and password you provided.".format(filename))
 
     return 0
 
