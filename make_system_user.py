@@ -39,9 +39,6 @@ def parseargs(argv=None):
     required.add_argument('-k', '--key', required=True,
         help=('The name of the snapcraft key to use to sign the system user assertion. The key must exist locally and be reported by "snapcraft keys". The key must also be registered.')
         )
-    required.add_argument('-l', '--keypword', required=True,
-        help=('The password of the snapcraft key used to sign the system-user assertion. This is not saved.')
-        )
     args = parser.parse_args()
     return args
 
@@ -117,10 +114,9 @@ def systemUserJson(account, brand, model, username, pwhash):
     data["until"] = until 
     return data
 
-def signUser(userJson, key, pwd):
+def signUser(userJson, key):
     cmd = "echo '" + json.dumps(userJson) + "'| snap sign -k " + key
-    proc = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-    res = proc.communicate(bytes(pwd, 'utf-8'))[0]
+    res = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE).communicate()[0]
     signed = str(res,'utf-8')
     return(signed)
 
@@ -145,7 +141,6 @@ def main(argv=None):
         print("Account-Id: ", account)
         print("Key: ", args.key)
         print("Key Fingerprint: ", selfSignKey)
-        print("Key pword: ", args.keypword)
 
     accountSigned = accountAssert(account) 
     if args.verbose:
@@ -162,7 +157,7 @@ def main(argv=None):
         print("system-user json:")
         print(json.dumps(userJson))
     
-    userSigned = signUser(userJson, args.key, args.keypword)
+    userSigned = signUser(userJson, args.key)
 
     user = accountSigned + "\n" + accountKeySigned + "\n" + userSigned
     if args.verbose:
