@@ -54,10 +54,11 @@ def pword_hash(pword):
 
 def key_fingerprint(key, account):    
     # ensure store reports key
-    for k in account['account_keys']:
-        if k['name'] == key:
-            return k['public-key-sha3-384']
-    print("Error: key '{}' is not reported by the store as one of your registered and local keys. Pleease use  snapcraft create-key KEY' or 'snapcraft register-key KEY' and 'snapcraft keys' as needed".format(key))
+    if len(account['account_keys']) > 0:
+        for k in account['account_keys']:
+            if k['name'] == key:
+                return k['public-key-sha3-384']
+    print("Error: key '{}' is not reported by the store as one of your registered and local keys. Please use snapcraft create-key KEY' or 'snapcraft register-key KEY' and 'snapcraft keys' as needed".format(key))
     return False
 
 def accountAssert(id):
@@ -106,6 +107,16 @@ def systemUserJson(account, brand, model, username, pwhash):
     data["until"] = until 
     return data
 
+def isLocalKey(key):
+    cmd = ['snap', 'keys']
+    res = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
+    lines = str(res,'utf-8').split('\n')
+    for line in lines:
+        if key in line:
+            return True
+    print("Error: key '{}' is not a local key. Please use snapcraft create-key' and then 'snapcraft register-key'".format(key))
+    return False
+
 def signUser(userJson, key):
     cmd = "echo '" + json.dumps(userJson) + "'| snap sign -k " + key
     res = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE).communicate()[0]
@@ -116,11 +127,14 @@ def main(argv=None):
     args = parseargs(argv)
     # quit if not snapcraft logged in
     account = ssoAccount()
-    if not account['account_id']:
+    if not account:
         sys.exit(1)
-    # quit if key does not exist or is not registered
+    # quit if key is not registered
     selfSignKey = key_fingerprint(args.key, account)
     if not selfSignKey:
+        sys.exit(1)
+    # quit if key does is not local
+    if not isLocalKey(args.key):
         sys.exit(1)
 
     if args.verbose:
