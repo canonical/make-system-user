@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 
-import os
 import sys
 import argparse
 import subprocess
@@ -42,11 +41,10 @@ def parseargs(argv=None):
     args = parser.parse_args()
     return args
 
-def ssoAccountId():
+def ssoAccount():
     try:
         store = storeapi.StoreClient()
-        account_info = store.get_account_information()
-        return account_info['account_id']
+        return store.get_account_information()
     except:
         print("Error: You do not appear to be logged in. Try 'snapcraft login'")
         return False
@@ -54,19 +52,13 @@ def ssoAccountId():
 def pword_hash(pword):
     return crypt.crypt(pword, crypt.mksalt(crypt.METHOD_SHA512))                                                 
 
-def key_fingerprint(key):    
-    cmd = ['snapcraft', 'keys']
-    res = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
-    resStr = str(res,'utf-8')
-    lines=resStr.split('\n')
-    for line in lines:
-        if not line.startswith('*'): #exclude non-registered keys
-            continue
-        tokens = line.split()
-        if tokens[1].strip() == key:
-            return tokens[2]
-    print("Error: key '{}' is not found or is not registered. Please use 'snapcraft keys' to verify your key exists and is registered.".format(key))
-    return False 
+def key_fingerprint(key, account):    
+    # ensure store reports key
+    for k in account['account_keys']:
+        if k['name'] == key:
+            return k['public-key-sha3-384']
+    print("Error: key '{}' is not reported by the store as one of your registered and local keys. Pleease use  snapcraft create-key KEY' or 'snapcraft register-key KEY' and 'snapcraft keys' as needed".format(key))
+    return False
 
 def accountAssert(id):
     cmd = ['snap', 'known', '--remote', 'account', 'account-id={}'.format(id)]
@@ -123,11 +115,11 @@ def signUser(userJson, key):
 def main(argv=None):
     args = parseargs(argv)
     # quit if not snapcraft logged in
-    account = ssoAccountId()
-    if not account:
+    account = ssoAccount()
+    if not account['account_id']:
         sys.exit(1)
     # quit if key does not exist or is not registered
-    selfSignKey = key_fingerprint(args.key)
+    selfSignKey = key_fingerprint(args.key, account)
     if not selfSignKey:
         sys.exit(1)
 
@@ -142,7 +134,7 @@ def main(argv=None):
         print("Key: ", args.key)
         print("Key Fingerprint: ", selfSignKey)
 
-    accountSigned = accountAssert(account) 
+    accountSigned = accountAssert(account['account_id']) 
     if args.verbose:
         print("Account signed:")
         print(accountSigned)
@@ -152,7 +144,7 @@ def main(argv=None):
         print("Account Key signed:")
         print(accountKeySigned)
     
-    userJson = systemUserJson(account, args.brand, args.model, args.username, pword_hash(args.password))
+    userJson = systemUserJson(account['account_id'], args.brand, args.model, args.username, pword_hash(args.password))
     if args.verbose:
         print("system-user json:")
         print(json.dumps(userJson))
