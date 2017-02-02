@@ -10,7 +10,7 @@ import datetime
 import json
 from snapcraft import storeapi
 
-PROGRAM = 'make-system-user-assertion'
+PROGRAM = ''
 VERSION = '0.1'
 
 #TODO: arg help i18n'd
@@ -124,6 +124,7 @@ def signUser(userJson, key):
     return(signed)
 
 def main(argv=None):
+    PROGRAM = argv[0]
     args = parseargs(argv)
     # quit if not snapcraft logged in
     account = ssoAccount()
@@ -179,4 +180,4 @@ def main(argv=None):
     return 0
 
 if __name__ == '__main__':
-    sys.exit(main())
+    sys.exit(main(sys.argv))
