@@ -1,0 +1,20 @@
+name: make-system-user
+version: '1'
+summary: Make a system user file for auto import
+description: Make an auto-import.assert file
+  containing required assertions to create a system user
+  signed by your registered key
+
+grade: devel
+confinement: classic 
+
+apps:
+    run:
+        command: bin/make_system_user
+
+parts:
+    env:
+        plugin: dump
+        source: .
+        organize:
+            make_system_user.py: bin/make_system_user
