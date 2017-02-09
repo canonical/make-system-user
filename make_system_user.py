@@ -6,7 +6,7 @@ import subprocess
 import crypt
 import json
 import time
-import datetime
+from datetime import datetime, timedelta
 import json
 from snapcraft import storeapi
 
@@ -93,10 +93,11 @@ def systemUserJson(account, brand, model, username, pwhash):
     data["revision"] = "1"
 
     ts = time.time()
-    dt = datetime.datetime.fromtimestamp(ts)
+    dt = datetime.fromtimestamp(ts)
+    dt = dt - timedelta(days=1)   
     d = dt.strftime('%Y-%m-%d')
     t = dt.strftime('%H:%M:%S')
-    since = d + 'T' + t + '-00:00'
+    since = d + 'T00:00:00-00:01'
     data["since"] = since 
     d = dt.replace(year = dt.year + 1).strftime('%Y-%m-%d')
     try:
