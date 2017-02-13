@@ -112,7 +112,7 @@ def systemUserJson(account, brand, model, username, pwhash):
 
     ts = time.time()
     dt = datetime.fromtimestamp(ts)
-    dt = dt - timedelta(days=1)   
+    dt = dt - timedelta(days=2)   
     d = dt.strftime('%Y-%m-%d')
     t = dt.strftime('%H:%M:%S')
     since = d + 'T00:00:00-00:01'
