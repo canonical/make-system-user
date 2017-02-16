@@ -15,6 +15,6 @@ apps:
 parts:
     env:
         plugin: dump
-        source: .
+        source: src
         organize:
             make_system_user.py: bin/make_system_user
