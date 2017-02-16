@@ -158,36 +158,38 @@ def main(argv=None):
         sys.exit(1)
 
     if args.verbose:
+        print("==== Args and related:")
         print("Version: ", VERSION)
         print("Brand ", args.brand)
         print("Model", args.model)
         print("Username", args.username)
         print("Password", args.password)
         print("Password hash", pword_hash(args.password))
-        print("Account-Id: ", account)
+        print("Account-Id: ", json.dumps(account, sort_keys=True, indent=4))
         print("Key: ", args.key)
         print("Key Fingerprint: ", selfSignKey)
+        print("")
 
     accountSigned = accountAssert(account['account_id']) 
     if args.verbose:
-        print("Account signed:")
+        print("==== Account signed:")
         print(accountSigned)
 
     accountKeySigned = accountKeyAssert(selfSignKey) 
     if args.verbose:
-        print("Account Key signed:")
+        print("==== Account Key signed:")
         print(accountKeySigned)
     
     userJson = systemUserJson(account['account_id'], args.brand, args.model, args.username, pword_hash(args.password))
     if args.verbose:
-        print("system-user json:")
-        print(json.dumps(userJson))
+        print("==== system-user json:")
+        print(json.dumps(userJson, sort_keys=True, indent=4))
     
     userSigned = signUser(userJson, args.key)
 
     user = accountSigned + "\n" + accountKeySigned + "\n" + userSigned
     if args.verbose:
-        print("system-user signed:")
+        print("==== System-user signed:")
         print(user)
 
     filename = "auto-import.assert"
