@@ -50,8 +50,11 @@ def parseargs(argv=None):
     required.add_argument('-u', '--username', required=True,
         help=('The username of the account to be created on the device')
         )
-    required.add_argument('-p', '--password', required=True,
-        help=('The password of the account to be created on the device.i This password is not saved')
+    parser.add_argument('-p', '--password', 
+        help=('The password of the account to be created on the device. This password is not saved. Either this or "ssh" is required.')
+        )
+    parser.add_argument('-s', '--ssh',
+        help=('The public ssh key to ssh using the system user to be created on the device. Either this or "password" is required.')
         )
     required.add_argument('-k', '--key', required=True,
         help=('The name of the snapcraft key to use to sign the system user assertion. The key must exist locally and be reported by "snapcraft keys". The key must also be registered.')
@@ -97,7 +100,7 @@ def accountKeyAssert(id):
         return False
     return(signed)
 
-def systemUserJson(account, brand, model, username, pwhash):
+def systemUserJson(account, brand, model, username):
     data = dict()
     data["type"] = "system-user"
     data["authority-id"] = account
@@ -106,7 +109,6 @@ def systemUserJson(account, brand, model, username, pwhash):
     data["models"] = [model]
     data["name"] = username + " User"
     data["username"] = username
-    data["password"] = pwhash
     data["email"] = "{}@localhost".format(username)
     data["revision"] = "1"
 
@@ -145,6 +147,10 @@ def signUser(userJson, key):
 def main(argv=None):
     PROGRAM = argv[0]
     args = parseargs(argv)
+    if args.password is None and args.ssh is None:
+        print("Error. You must supply either a password or a public SSH key")
+        sys.exit(1)
+
     # quit if not snapcraft logged in
     account = ssoAccount()
     if not account:
@@ -164,7 +170,8 @@ def main(argv=None):
         print("Model", args.model)
         print("Username", args.username)
         print("Password", args.password)
-        print("Password hash", pword_hash(args.password))
+        print("SSH", args.ssh)
+        print("Password", args.password)
         print("Account-Id: ", json.dumps(account, sort_keys=True, indent=4))
         print("Key: ", args.key)
         print("Key Fingerprint: ", selfSignKey)
@@ -180,7 +187,11 @@ def main(argv=None):
         print("==== Account Key signed:")
         print(accountKeySigned)
     
-    userJson = systemUserJson(account['account_id'], args.brand, args.model, args.username, pword_hash(args.password))
+    userJson = systemUserJson(account['account_id'], args.brand, args.model, args.username )
+    if args.password:
+        userJson["password"] = pword_hash(args.password)
+    else: #ssh pub key
+        userJson["ssh-keys"] = [args.ssh]
     if args.verbose:
         print("==== system-user json:")
         print(json.dumps(userJson, sort_keys=True, indent=4))
