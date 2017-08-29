@@ -51,10 +51,10 @@ def parseargs(argv=None):
         help=('The username of the account to be created on the device')
         )
     parser.add_argument('-p', '--password', 
-        help=('The password of the account to be created on the device. This password is not saved. Either this or "ssh" is required.')
+        help=('The password of the account to be created on the device. This password is not saved. Either this or --ssh-keys is required.')
         )
-    parser.add_argument('-s', '--ssh',
-        help=('The public ssh key to ssh using the system user to be created on the device. Either this or "password" is required.')
+    parser.add_argument('-s', '--ssh-keys', nargs="+",
+        help=('One or more public ssh keys to use for SSH using the system user to be created on the device. Either this or --password is required. Enclosed each key string in single quotes. Use a space to delimit them. For example: --ssh-key \'key one\' \'key two\'.')
         )
     required.add_argument('-k', '--key', required=True,
         help=('The name of the snapcraft key to use to sign the system user assertion. The key must exist locally and be reported by "snapcraft keys". The key must also be registered.')
@@ -147,8 +147,8 @@ def signUser(userJson, key):
 def main(argv=None):
     PROGRAM = argv[0]
     args = parseargs(argv)
-    if args.password is None and args.ssh is None:
-        print("Error. You must supply either a password or a public SSH key")
+    if args.password is None and args.ssh_keys is None:
+        print("Error. You must supply either a password or public SSH keys(s)")
         sys.exit(1)
 
     # quit if not snapcraft logged in
@@ -170,7 +170,7 @@ def main(argv=None):
         print("Model", args.model)
         print("Username", args.username)
         print("Password", args.password)
-        print("SSH", args.ssh)
+        print("SSH", args.ssh_keys)
         print("Password", args.password)
         print("Account-Id: ", json.dumps(account, sort_keys=True, indent=4))
         print("Key: ", args.key)
@@ -191,7 +191,7 @@ def main(argv=None):
     if args.password:
         userJson["password"] = pword_hash(args.password)
     else: #ssh pub key
-        userJson["ssh-keys"] = [args.ssh]
+        userJson["ssh-keys"] = args.ssh_keys
     if args.verbose:
         print("==== system-user json:")
         print(json.dumps(userJson, sort_keys=True, indent=4))
