@@ -14,7 +14,12 @@ apps:
 
 parts:
     env:
-        plugin: dump
+        plugin: python
         source: src
-        organize:
-            make_system_user.py: bin/make_system_user
+        python-packages:
+            - snapcraft
+            - PyYAML
+            - click
+        override-build: |
+            snapcraftctl build
+            cp src/make_system_user.py $SNAPCRAFT_PART_INSTALL/bin/make_system_user
