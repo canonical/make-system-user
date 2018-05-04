@@ -22,4 +22,5 @@ parts:
             - click
         override-build: |
             snapcraftctl build
-            cp src/make_system_user.py $SNAPCRAFT_PART_INSTALL/bin/make_system_user
+            cp run.sh $SNAPCRAFT_PART_INSTALL/bin/run.sh
+            cp make_system_user.py $SNAPCRAFT_PART_INSTALL/bin/make_system_user.py
