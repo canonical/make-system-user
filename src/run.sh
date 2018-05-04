@@ -1,1 +1,1 @@
-$SNAP/usr/bin/python3 make_system_user.py
+$SNAP/usr/bin/python3 $SNAP/bin/make_system_user.py
