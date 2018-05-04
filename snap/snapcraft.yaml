@@ -10,7 +10,7 @@ confinement: classic
 
 apps:
     make-system-user:
-        command: bin/make_system_user
+        command: bin/run.sh
 
 parts:
     env:
