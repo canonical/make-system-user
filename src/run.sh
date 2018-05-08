@@ -1,1 +1,0 @@
-$SNAP/usr/bin/python3 $SNAP/bin/make_system_user.py

@@ -10,17 +10,28 @@ confinement: classic
 
 apps:
     make-system-user:
-        command: bin/run.sh
+        command: bin/make_system_user
 
 parts:
+    # this part is necessary because snapcraft doesn't correctly migrate the
+    # dependencies for the snapcraft package into the final snap, so we 
+    # have to manually add all the dependencies
+    snapcraft-pip:
+        plugin: nil
+        source: https://github.com/snapcore/snapcraft.git
+        source-tag: "2.42"
+        source-depth: 1
+        stage-packages: 
+        - libapt-pkg-dev
+        - libsodium-dev
+        override-build: |
+            pip3 install -r requirements.txt -t $SNAPCRAFT_PART_INSTALL/usr/lib/python3/dist-packages --ignore-installed
     env:
+        after: [snapcraft-pip]
         plugin: python
-        source: src
-        python-packages:
-            - snapcraft
-            - PyYAML
-            - click
+        python-version: python3
+        source: .
         override-build: |
             snapcraftctl build
-            cp run.sh $SNAPCRAFT_PART_INSTALL/bin/run.sh
-            cp make_system_user.py $SNAPCRAFT_PART_INSTALL/bin/make_system_user.py
+            # cp run.sh $SNAPCRAFT_PART_INSTALL/bin/run.sh
+            # cp make_system_user.py $SNAPCRAFT_PART_INSTALL/bin/make_system_user.py
