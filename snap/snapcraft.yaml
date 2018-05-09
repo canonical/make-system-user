@@ -1,5 +1,5 @@
 name: make-system-user
-version: '6'
+version: '7'
 summary: Make a system user file for auto import
 description: Make an auto-import.assert file
   containing required assertions to create a system user
@@ -22,6 +22,7 @@ parts:
         source-tag: "2.42"
         source-depth: 1
         stage-packages: 
+        - libc6
         - libapt-pkg-dev
         - libsodium-dev
         override-build: |
@@ -31,3 +32,5 @@ parts:
         plugin: python
         python-version: python3
         source: .
+        stage-packages: 
+        - libc6
