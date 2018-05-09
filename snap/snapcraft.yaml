@@ -31,7 +31,3 @@ parts:
         plugin: python
         python-version: python3
         source: .
-        override-build: |
-            snapcraftctl build
-            # cp run.sh $SNAPCRAFT_PART_INSTALL/bin/run.sh
-            # cp make_system_user.py $SNAPCRAFT_PART_INSTALL/bin/make_system_user.py
