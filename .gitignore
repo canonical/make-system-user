@@ -3,3 +3,5 @@ stage
 prime
 auto-import*
 *.snap
+
+*.bz2

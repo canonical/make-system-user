@@ -143,6 +143,8 @@ def signUser(userJson, key):
     return(signed)
 
 def main(argv=None):
+    if argv is None:
+        argv = sys.argv
     PROGRAM = argv[0]
     args = parseargs(argv)
     if args.password is None and args.ssh_keys is None:
