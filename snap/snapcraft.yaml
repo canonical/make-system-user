@@ -1,5 +1,5 @@
 name: make-system-user
-version: '7'
+version: '8'
 summary: Make a system user file for auto import
 description: Make an auto-import.assert file
   containing required assertions to create a system user
@@ -7,12 +7,28 @@ description: Make an auto-import.assert file
 
 grade: stable
 confinement: classic 
+base: core18
 
 apps:
     make-system-user:
         command: bin/make_system_user
 
 parts:
+    # this part is needed because snapcraft python requires PyYAML built with
+    # libYAML bindings so that snapcraft can use C-based loaders it provides
+    libyaml:
+        plugin: python
+        python-version: python3
+        source: https://pyyaml.org/download/pyyaml/PyYAML-3.13.tar.gz
+        build-environment:
+        - C_INCLUDE_PATH: /usr/include/python3.6
+        build-packages: 
+        - python3-dev
+        - libyaml-dev
+        override-build: |
+            snapcraftctl build
+            python3 setup.py --with-libyaml install
+
     # this part is necessary because snapcraft doesn't correctly migrate the
     # dependencies for the snapcraft package into the final snap, so we 
     # have to manually add all the dependencies
@@ -22,7 +38,6 @@ parts:
         source-tag: "2.42"
         source-depth: 1
         stage-packages: 
-        - libc6
         - libapt-pkg-dev
         - libsodium-dev
         override-build: |
@@ -32,5 +47,3 @@ parts:
         plugin: python
         python-version: python3
         source: .
-        stage-packages: 
-        - libc6
