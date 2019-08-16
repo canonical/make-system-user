@@ -34,7 +34,7 @@ VERSION = '0.1'
 def parseargs(argv=None):
     parser = argparse.ArgumentParser(
         prog=PROGRAM,
-        description=('Create a self-signed system-user assertion using a local snapcraft key that has been registered with an Ubuntu SSO account.'),
+        description=('Create a self-signed system-user assertion using a local snapcraft key that has been registered with an Ubuntu SSO account. This account must have the authority to sign system-user assertions, typically simply by being the Brand Account. The model assertion can delegate such authority.'),
         )
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true'
         )
@@ -51,8 +51,13 @@ def parseargs(argv=None):
     parser.add_argument('-p', '--password', 
         help=('The password of the account to be created on the device. This password is not saved. Either this or --ssh-keys is required.')
         )
+    parser.add_argument('-f', '--force-password-change', 
+        default=False,
+        action="store_true",
+        help=('Force the user to change the password on first use. --password flag required.')
+        )
     parser.add_argument('-s', '--ssh-keys', nargs="+",
-        help=('One or more public ssh keys to use for SSH using the system user to be created on the device. Either this or --password is required. Enclosed each key string in single quotes. Use a space to delimit them. For example: --ssh-key \'key one\' \'key two\'.')
+        help=('One or more public ssh keys to use for SSH using the system user to be created on the device. Either this or --password is required. Enclosed each key string in single quotes. Use a space to delimit them. For example: --ssh-keys \'key one\' \'key two\'.')
         )
     required.add_argument('-k', '--key', required=True,
         help=('The name of the snapcraft key to use to sign the system user assertion. The key must exist locally and be reported by "snapcraft keys". The key must also be registered.')
@@ -143,12 +148,18 @@ def signUser(userJson, key):
     return(signed)
 
 def main(argv=None):
-    if argv is None:
-        argv = sys.argv
-    PROGRAM = argv[0]
     args = parseargs(argv)
     if args.password is None and args.ssh_keys is None:
-        print("Error. You must supply either a password or public SSH keys(s)")
+        print("Error. You must supply either a password or public SSH keys(s).")
+        sys.exit(1)
+    if args.password is not None and args.ssh_keys is not None:
+        print("Error. You cannot use both a password and an ssh key.")
+        sys.exit(1)
+    if args.force_password_change and args.password is None:
+        print("Error. Using --force-password-change also requires --password.")
+        sys.exit(1)
+    if args.force_password_change and args.ssh_keys is not None:
+        print("Error. Using --force-password-change with --ssh-keys is not allowed.")
         sys.exit(1)
 
     # quit if not snapcraft logged in
@@ -171,7 +182,7 @@ def main(argv=None):
         print("Username", args.username)
         print("Password", args.password)
         print("SSH", args.ssh_keys)
-        print("Password", args.password)
+        print("ForcePasswordChange", args.force_password_change)
         print("Account-Id: ", json.dumps(account, sort_keys=True, indent=4))
         print("Key: ", args.key)
         print("Key Fingerprint: ", selfSignKey)
@@ -190,6 +201,8 @@ def main(argv=None):
     userJson = systemUserJson(account['account_id'], args.brand, args.model, args.username )
     if args.password:
         userJson["password"] = pword_hash(args.password)
+        if args.force_password_change:
+            userJson["force-password-change"] = "true"
     else: #ssh pub key
         userJson["ssh-keys"] = args.ssh_keys
     if args.verbose:
