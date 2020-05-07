@@ -48,6 +48,9 @@ def parseargs(argv=None):
     required.add_argument('-u', '--username', required=True,
         help=('The username of the account to be created on the device')
         )
+    required.add_argument('-e', '--email', required=True,
+        help=('The email address of the login.ubuntu.com account to be created on the device.')
+        )
     parser.add_argument('-p', '--password', 
         help=('The password of the account to be created on the device. This password is not saved. Either this or --ssh-keys is required.')
         )
@@ -98,7 +101,7 @@ def accountKeyAssert(id):
         return False
     return(signed)
 
-def systemUserJson(account, brand, model, username):
+def systemUserJson(account, brand, model, username, email):
     data = dict()
     data["type"] = "system-user"
     data["authority-id"] = account
@@ -107,7 +110,7 @@ def systemUserJson(account, brand, model, username):
     data["models"] = [model]
     data["name"] = username + " User"
     data["username"] = username
-    data["email"] = "{}@localhost".format(username)
+    data["email"] = email
     data["revision"] = "1"
 
     ts = time.time()
@@ -170,6 +173,7 @@ def main(argv=None):
         print("Model", args.model)
         print("Username", args.username)
         print("Password", args.password)
+        print("Email", args.email)
         print("SSH", args.ssh_keys)
         print("Password", args.password)
         print("Account-Id: ", json.dumps(account, sort_keys=True, indent=4))
@@ -187,7 +191,7 @@ def main(argv=None):
         print("==== Account Key signed:")
         print(accountKeySigned)
     
-    userJson = systemUserJson(account['account_id'], args.brand, args.model, args.username )
+    userJson = systemUserJson(account['account_id'], args.brand, args.model, args.username, args.email )
     if args.password:
         userJson["password"] = pword_hash(args.password)
     else: #ssh pub key
