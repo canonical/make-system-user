@@ -108,7 +108,6 @@ def accountKeyAssert(id):
 
 def getUntil(argsuntil, dt, d, t):
     if argsuntil is None:
-        print("until is None")
         d = dt.replace(year = dt.year + 1).strftime('%Y-%m-%d')
         try:
             dt.replace(year = dt.year + 1)
