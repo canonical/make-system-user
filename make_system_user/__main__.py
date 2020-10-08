@@ -34,7 +34,7 @@ VERSION = '0.1'
 def parseargs(argv=None):
     parser = argparse.ArgumentParser(
         prog=PROGRAM,
-        description=('Create a self-signed system-user assertion using a local snapcraft key that has been registered with an Ubuntu SSO account.'),
+        description=('Create and sign a system-user assertion using a local snapcraft key that has been registered with an Ubuntu SSO account. This account must have the authority to sign system-user assertions, typically simply by being the Brand Account. The model assertion can delegate such authority. On success, "auto-import.assert" is created in the current directory. If this file is placed on a USB drive and it is inserted into an Ubuntu Core system, and if the system does not already have a system-user, the system user is created.'),
         )
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true'
         )
@@ -54,8 +54,16 @@ def parseargs(argv=None):
     parser.add_argument('-p', '--password', 
         help=('The password of the account to be created on the device. This password is not saved. Either this or --ssh-keys is required.')
         )
+    parser.add_argument('--until', 
+            help=('Optionally specify the date until which the system user can be created in the following format: YYYY:MM:DD, for example "2021:02:28" for 28 Feb 2020. If omitted, the value is one year from the "since" date, which is two days before today.')
+        )
+    parser.add_argument('-f', '--force-password-change', 
+        default=False,
+        action="store_true",
+        help=('Force the user to change the password on first use. --password flag required.')
+        )
     parser.add_argument('-s', '--ssh-keys', nargs="+",
-        help=('One or more public ssh keys to use for SSH using the system user to be created on the device. Either this or --password is required. Enclosed each key string in single quotes. Use a space to delimit them. For example: --ssh-key \'key one\' \'key two\'.')
+        help=('One or more public ssh keys to use for SSH using the system user to be created on the device. Either this or --password is required. Enclosed each key string in single quotes. Use a space to delimit them. For example: --ssh-keys \'key one\' \'key two\'.')
         )
     required.add_argument('-k', '--key', required=True,
         help=('The name of the snapcraft key to use to sign the system user assertion. The key must exist locally and be reported by "snapcraft keys". The key must also be registered.')
@@ -101,7 +109,27 @@ def accountKeyAssert(id):
         return False
     return(signed)
 
-def systemUserJson(account, brand, model, username, email):
+def getUntil(argsuntil, dt, d, t):
+    if argsuntil is None:
+        d = dt.replace(year = dt.year + 1).strftime('%Y-%m-%d')
+        try:
+            dt.replace(year = dt.year + 1)
+        except ValueError: #if not a valid day, get the next day
+            dt = dt + (date(dt.year + 1, 1, 1) - date(dt.year, 1, 1))
+        until = d + 'T' + t + '-00:00'
+    else:
+        print("until is", argsuntil)
+        y = argsuntil.split(":")[0]
+        m = argsuntil.split(":")[1]
+        dy = argsuntil.split(":")[2]
+        dt1 = dt.replace(year = int(y))
+        dt2 = dt1.replace(month = int(m))
+        dt3 = dt2.replace(day = int(dy))
+        d2 = dt3.strftime('%Y-%m-%d')
+        until = d2 + 'T00:00:00-00:01'
+    return(until)
+
+def systemUserJson(account, brand, model, username, until):
     data = dict()
     data["type"] = "system-user"
     data["authority-id"] = account
@@ -120,13 +148,19 @@ def systemUserJson(account, brand, model, username, email):
     t = dt.strftime('%H:%M:%S')
     since = d + 'T00:00:00-00:01'
     data["since"] = since 
-    d = dt.replace(year = dt.year + 1).strftime('%Y-%m-%d')
-    try:
-        dt.replace(year = dt.year + 1)
-    except ValueError: #if not a valid day, get the next day
-        dt = dt + (date(dt.year + 1, 1, 1) - date(dt.year, 1, 1))
-    until = d + 'T' + t + '-00:00'
-    data["until"] = until 
+    data["until"] = getUntil(until, dt, d, t)
+    if data["until"] == None:
+        print("Error: until value setting failed")
+        sys.exit(1)
+    y = data["until"].split("-")[0]
+    m = data["until"].split("-")[1]
+    dy = data["until"].split("-")[2].split("T")[0]
+    untildt = datetime(int(y), int(m), int(dy), 0, 0, 0, 0)
+    if dt >= untildt:
+        print("Error: until date is not after since date")
+        print("since", data["since"])
+        print("until", data["until"])
+        sys.exit(1)
     return data
 
 def isLocalKey(key):
@@ -146,12 +180,18 @@ def signUser(userJson, key):
     return(signed)
 
 def main(argv=None):
-    if argv is None:
-        argv = sys.argv
-    PROGRAM = argv[0]
     args = parseargs(argv)
     if args.password is None and args.ssh_keys is None:
-        print("Error. You must supply either a password or public SSH keys(s)")
+        print("Error. You must supply either a password or public SSH keys(s).")
+        sys.exit(1)
+    if args.password is not None and args.ssh_keys is not None:
+        print("Error. You cannot use both a password and an ssh key.")
+        sys.exit(1)
+    if args.force_password_change and args.password is None:
+        print("Error. Using --force-password-change also requires --password.")
+        sys.exit(1)
+    if args.force_password_change and args.ssh_keys is not None:
+        print("Error. Using --force-password-change with --ssh-keys is not allowed.")
         sys.exit(1)
 
     # quit if not snapcraft logged in
@@ -175,7 +215,7 @@ def main(argv=None):
         print("Password", args.password)
         print("Email", args.email)
         print("SSH", args.ssh_keys)
-        print("Password", args.password)
+        print("ForcePasswordChange", args.force_password_change)
         print("Account-Id: ", json.dumps(account, sort_keys=True, indent=4))
         print("Key: ", args.key)
         print("Key Fingerprint: ", selfSignKey)
@@ -191,9 +231,11 @@ def main(argv=None):
         print("==== Account Key signed:")
         print(accountKeySigned)
     
-    userJson = systemUserJson(account['account_id'], args.brand, args.model, args.username, args.email )
+    userJson = systemUserJson(account['account_id'], args.brand, args.model, args.username, args.until)
     if args.password:
         userJson["password"] = pword_hash(args.password)
+        if args.force_password_change:
+            userJson["force-password-change"] = "true"
     else: #ssh pub key
         userJson["ssh-keys"] = args.ssh_keys
     if args.verbose:
