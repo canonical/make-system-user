@@ -1,5 +1,5 @@
 name: make-system-user
-version: '8'
+version: '12'
 summary: Make a system user file for auto import
 description: Make an auto-import.assert file
   containing required assertions to create a system user
