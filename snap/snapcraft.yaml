@@ -35,6 +35,7 @@ parts:
     snapcraft-pip:
         plugin: nil
         source: https://github.com/snapcore/snapcraft.git
+        source-type: git
         source-tag: "2.42"
         source-depth: 1
         stage-packages: 
@@ -42,8 +43,12 @@ parts:
         - libsodium-dev
         override-build: |
             pip3 install -r requirements.txt -t $SNAPCRAFT_PART_INSTALL/usr/lib/python3/dist-packages --ignore-installed
+        build-packages: [ libapt-pkg-dev ]
     env:
         after: [snapcraft-pip]
         plugin: python
         python-version: python3
         source: .
+        override-build: |
+            snapcraftctl build
+            cp $SNAPCRAFT_PROJECT_DIR/mydirspy $SNAPCRAFT_PART_INSTALL/lib/python3.6/site-packages/snapcraft/internal/dirs.py
