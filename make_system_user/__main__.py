@@ -55,7 +55,10 @@ def parseargs(argv=None):
         help=('The password of the account to be created on the device. This password is not saved. Either this or --ssh-keys is required.')
         )
     parser.add_argument('--until', 
-            help=('Optionally specify the date until which the system user can be created in the following format: YYYY:MM:DD, for example "2021:02:28" for 28 Feb 2020. If omitted, the value is one year from the "since" date, which is two days before today.')
+        help=('Optionally specify the date until which the system user can be created in the following format: YYYY:MM:DD, for example "2021:02:28" for 28 Feb 2020. If omitted, the value is one year from the "since" date, which is two days before today.')
+        )
+    parser.add_argument('--serials', nargs='+',  
+        help=('Optionally add one or more serial numbers to limit creation of a system-user to a system of one of the specified serial numbers. Use a space to delimit them. For example: --serial-numbers \'123abc\' \'zyx321abc\'.')
         )
     parser.add_argument('-f', '--force-password-change', 
         default=False,
@@ -63,7 +66,7 @@ def parseargs(argv=None):
         help=('Force the user to change the password on first use. --password flag required.')
         )
     parser.add_argument('-s', '--ssh-keys', nargs="+",
-        help=('One or more public ssh keys to use for SSH using the system user to be created on the device. Either this or --password is required. Enclosed each key string in single quotes. Use a space to delimit them. For example: --ssh-keys \'key one\' \'key two\'.')
+        help=('Optionally add one or more public ssh keys to use for SSH using the system user to be created on the device. Either this or --password is required. Enclosed each key string in single quotes. Use a space to delimit them. For example: --ssh-keys \'key one\' \'key two\'.')
         )
     required.add_argument('-k', '--key', required=True,
         help=('The name of the snapcraft key to use to sign the system user assertion. The key must exist locally and be reported by "snapcraft keys". The key must also be registered.')
@@ -129,7 +132,7 @@ def getUntil(argsuntil, dt, d, t):
         until = d2 + 'T00:00:00-00:01'
     return(until)
 
-def systemUserJson(account, brand, model, username, until):
+def systemUserJson(account, brand, model, username, until, email):
     data = dict()
     data["type"] = "system-user"
     data["authority-id"] = account
@@ -231,13 +234,18 @@ def main(argv=None):
         print("==== Account Key signed:")
         print(accountKeySigned)
     
-    userJson = systemUserJson(account['account_id'], args.brand, args.model, args.username, args.until)
+    userJson = systemUserJson(account['account_id'], args.brand, args.model, args.username, args.until, args.email)
     if args.password:
         userJson["password"] = pword_hash(args.password)
         if args.force_password_change:
             userJson["force-password-change"] = "true"
     else: #ssh pub key
         userJson["ssh-keys"] = args.ssh_keys
+
+    if args.serials:
+        userJson["format"] = "1";
+        userJson["serials"] = args.serials
+
     if args.verbose:
         print("==== system-user json:")
         print(json.dumps(userJson, sort_keys=True, indent=4))
