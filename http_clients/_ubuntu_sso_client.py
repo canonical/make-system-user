@@ -18,7 +18,7 @@ import logging
 import json
 import os
 import pathlib
-from typing import Optional, TextIO
+from typing import Optional, Iterable, Dict, TextIO
 from urllib.parse import urljoin, urlparse
 
 import pymacaroons
@@ -119,10 +119,9 @@ class UbuntuOneAuthClient(_http_client.Client):
 
     def login(
         self,
-        *,
-        email: Optional[str] = "ce-team-test@canonical.com",
-        password: Optional[str] = "TheLastThingThatHarryToldSally",
-        macaroon: Optional[str] = "MDAyOWxvY2F0aW9uIG15YXBwcy5kZXZlbG9wZXIudWJ1bnR1LmNvbQowMDE2aWRlbnRpZmllciBNeUFwcHMKMDA0YmNpZCBteWFwcHMuZGV2ZWxvcGVyLnVidW50dS5jb218dmFsaWRfc2luY2V8MjAyMS0wOC0wNVQyMjowMDoyNC44MDYwMTIKMDE3ZGNpZCB7InZlcnNpb24iOiAxLCAic2VjcmV0IjogIm5kZE1aUzVWek1SZGlRSDBPZ2o1VyswanI3UWhnR2dyUFg1L0lUZkEvcUY1am1QaHlqa09RZ0VmeUttTlNCMWV2Wm5Bc3RnUlhDWlhGY3ZIR1ptNk1GVkt0djZaMjZOeGxMVXQyZGxoblhMTXBobjJJejVBMGJLTUZWOEhuTWZ4RHNVOW1WS2JWdzY5TUZTRnBxK25lNDZGUzZkSWpMR2ZtbzAvaWc4ZDF3ZW0zV3pYVTQ5N2dTNVJVOTJoZmNzbDZrbzJIUFZqSFA3bmdiTkpSUlp0L0c4dFVROTlRM2NTV2llREJJK3IzV0ppYlFUakkrTzFyeVhCL25teUh1cEpvYTBKbGtzTEFCNlduSncyYmxzSHFsWmRwWFI0aHZaNjJ6Q3BEd2YwVm9CNXlkQUIrV2VEL2NpNmwrUHJrSlVleHZWZVpvUW5UQTZNbEVaZlRIOWVzUT09In0KMDA1MXZpZCAPrw4Q89VFcDW1Ubxsp6Q73tnpMu7DWDDzjBIG40bN-P4qwsIpQLBVWdSa88ysRWtIjSJKYbq3RlbpxAIqw4sWPhzrod6iFskKMDAxOGNsIGxvZ2luLnVidW50dS5jb20KMDAzOWNpZCBteWFwcHMuZGV2ZWxvcGVyLnVidW50dS5jb218YWNsfFsiZWRpdF9hY2NvdW50Il0KMDA0N2NpZCBteWFwcHMuZGV2ZWxvcGVyLnVidW50dS5jb218ZXhwaXJlc3wyMDIyLTA4LTA1VDIyOjAwOjI0LjgwNTkwMAowMDJmc2lnbmF0dXJlIJo560vYdZdDOXTQ0m55Z-RaGL5e9M-SvBIxDtaK_sl7Cg",
+        email: Optional[str] = None,
+        password: Optional[str] = None,
+        macaroon: Optional[str] = None,
         otp: Optional[str] = None,
         config_fd: TextIO = None,
         save: bool = True,
@@ -156,6 +155,33 @@ class UbuntuOneAuthClient(_http_client.Client):
     def logout(self) -> None:
         self._conf.clear()
         self._conf.save()
+
+    def get_macaroon(
+        self,
+        *,
+        acls: Iterable[str] = None,
+        packages: Optional[Iterable[Dict[str, str]]] = None,
+        channels: Optional[Iterable[str]] = None,
+        expires: Optional[Iterable[str]] = None,
+    ):
+        data: Dict[str, Any] = {"permissions": "account"}
+        if packages is not None:
+            data["packages"] = packages
+        if channels is not None:
+            data["channels"] = channels
+        if expires is not None:
+            data["expires"] = expires
+
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+
+        urlpath = "/dev/api/acl/"
+
+        response = self.get(urlpath, json=data, headers=headers, auth_header=False)
+
+        if response.ok:
+            return response.json()["macaroon"]
+        else:
+            raise errors.GeneralStoreError("Failed to get macaroon", response)
 
     def _discharge_token(
         self, email: str, password: str, otp: Optional[str], caveat_id

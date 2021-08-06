@@ -22,7 +22,6 @@ from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectionError, RetryError
 from requests.packages.urllib3.util.retry import Retry
 
-#from . import agent, errors
 from . import errors
 
 

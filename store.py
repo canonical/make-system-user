@@ -14,9 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import getpass
 import logging
 import json
 import os
+import sys 
 import pathlib
 from typing import Optional, TextIO
 from urllib.parse import urljoin, urlparse
@@ -26,32 +28,44 @@ import requests
 from simplejson.scanner import JSONDecodeError
 from xdg import BaseDirectory
 
-#from . import agent, _config, errors, _http_client
 from http_clients import _config
-from http_clients import  errors
 from http_clients import  _http_client
-from http_clients import  store_api
 import http_clients
 
 
 def main():
-    print("Hello World!")
-    #authClient = http_clients.AuthClient    
-    httpClient = http_clients.Client()
     authClient = http_clients.UbuntuOneAuthClient() 
-    authClient.login()
+
+    # get macaroon for account 
+
+    url = "https://dashboard.snapcraft.io/dev/api/acl/"
+    data = {"permissions":["package_access"]}
+    # getting macaroon can only be anonymous, so no auth client
+    response = requests.request(
+        "POST",
+        url,
+        data=json.dumps(data),
+        headers={"Content-Type": "application/json", "Accept": "application/json"},
+    )
+
+    #if response.ok:
+    #    print(json.dumps(response.json(), indent=2))
+    #else:
+    #    print(' mac response error')
+    #    print("mac text", response.text)
+
+    _macaroon = response.json()["macaroon"]
+    #_email = "ce-team-test@canonical.com"
+    #_password  = "TheLastThingThatHarryToldSally"
+    _email = input("Ubuntu SSO email address: ")
+    _password = getpass.getpass("password: ")
+    _otp = input("two factor: ") 
+    authClient.login(_email, _password, _macaroon, _otp)
+
+    # sys.exit()
+    # get account info
+
     url = "https://dashboard.snapcraft.io/dev/api/account"
-    data = {"account-keys": str,
-            "display-name": str,
-            "email": str,
-            "id": str,
-            "validation": str,
-            "stores": [],
-            "username": str,
-            "account-id": str,
-            "account-keys": [],
-            } 
-    #data = dict()
     headers = str
     response = authClient.request(
         "GET",
@@ -59,16 +73,14 @@ def main():
         headers={"Content-Type": "application/json", "Accept": "application/json", "Authorization": authClient.auth},
     )
 
-    print("status code", response.status_code)
+    #print("status code", response.status_code)
     if response.ok:
-       print(data)
-    else:
+        print(json.dumps(response.json(), indent=2))
+    else:    
         print('response error')
         print("text", response.text)
 
-    print("json", response.json())
-    print("encoding", response.encoding)
-    
+    #print("encoding", response.encoding)
 
 if __name__ == "__main__":
     main()
