@@ -24,7 +24,7 @@ setup(
     long_description=readmeDescription,
     #url='https://github.com/knitzsche/make-system-user',
     packages=["make_system_user"],
-    install_requires=['snapcraft'],
+    #install_requires=['snapcraft'],
     entry_points={
         'console_scripts': [
             'make_system_user = make_system_user.__main__:main',

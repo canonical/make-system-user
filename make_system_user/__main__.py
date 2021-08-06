@@ -24,7 +24,10 @@ import json
 import time
 from datetime import datetime, timedelta
 import json
-from snapcraft import storeapi
+import http_clients
+import requests
+import getpass
+
 
 PROGRAM = ''
 VERSION = '0.1'
@@ -74,17 +77,66 @@ def parseargs(argv=None):
     args = parser.parse_args()
     return args
 
+def get_macaroon():
+    authClient = http_clients.UbuntuOneAuthClient()
+
+    # get macaroon for account
+
+    url = "https://dashboard.snapcraft.io/dev/api/acl/"
+    data = {"permissions":["package_access"]}
+    # getting macaroon can only be anonymous, so no auth client
+    response = requests.request(
+        "POST",
+        url,
+        data=json.dumps(data),
+        headers={"Content-Type": "application/json", "Accept": "application/json"},
+    )
+
+    if not response.ok:
+        print('Error getting macaroon')
+        print(response.text)
+        sys.exit(1)
+
+    return response.json()["macaroon"]
+
+
 def ssoAccount():
+    _macaroon = get_macaroon()
+    _email = input("Ubuntu SSO email address: ")
+    _password = getpass.getpass("password: ")
+    _otp = input("two factor: ")
+
+    authClient = http_clients.UbuntuOneAuthClient()
+
     try:
-        store = storeapi.StoreClient()
-        return store.get_account_information()
+        authClient.login(_email, _password, _macaroon, _otp)
     except:
-        print("Error: You do not appear to be logged in. Try 'snapcraft login'")
+        print("Error: Your login did not succeed")
         return False
+    # get account info
+
+    url = "https://dashboard.snapcraft.io/dev/api/account"
+    headers = str
+    response = authClient.request(
+        "GET",
+        url,
+        headers={"Content-Type": "application/json", "Accept": "application/json", "Authorization": authClient.auth},
+    )
+
+    #print("status code", response.status_code)
+    if not response.ok:
+        print('Error getting account info')
+        print(response.text)
+        sys.exit(1)
+
+   
+    f = open("out.json", "w")
+    f.write(json.dumps(response.json(), indent=2))
+    f.close()
+    return response.json()
 
 def pword_hash(pword):
     return crypt.crypt(pword, crypt.mksalt(crypt.METHOD_SHA512))                                                 
-
 def key_fingerprint(key, account):    
     # ensure store reports key
     if len(account['account_keys']) > 0:

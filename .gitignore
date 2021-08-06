@@ -5,4 +5,5 @@ auto-import*
 *swp
 *.snap
 *.bz2
-http_clients/__pycache__/
+make_system_user/http_clients/__pycache__/
+
