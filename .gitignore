@@ -2,6 +2,7 @@ parts
 stage
 prime
 auto-import*
+*swp
 *.snap
 *.bz2
 http_clients/__pycache__/
