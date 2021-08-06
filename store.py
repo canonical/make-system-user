@@ -75,7 +75,9 @@ def main():
         print('Error getting account info')
         print(response.text)
         sys.exit(1)
-    print(json.dumps(response.json(), indent=2))
+    f = open("out.json", "w")
+    f.write(json.dumps(response.json(), indent=2))
+    f.close()
 
 if __name__ == "__main__":
     main()
