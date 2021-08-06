@@ -3,5 +3,5 @@ stage
 prime
 auto-import*
 *.snap
-
 *.bz2
+http_clients/__pycache__/
