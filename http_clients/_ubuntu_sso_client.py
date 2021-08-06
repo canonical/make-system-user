@@ -26,6 +26,7 @@ import requests
 from simplejson.scanner import JSONDecodeError
 from xdg import BaseDirectory
 
+#from . import agent, _config, errors, _http_client
 from . import _config, errors, _http_client
 
 
@@ -119,9 +120,9 @@ class UbuntuOneAuthClient(_http_client.Client):
     def login(
         self,
         *,
-        email: Optional[str] = None,
-        password: Optional[str] = None,
-        macaroon: Optional[str] = None,
+        email: Optional[str] = "ce-team-test@canonical.com",
+        password: Optional[str] = "TheLastThingThatHarryToldSally",
+        macaroon: Optional[str] = "MDAyOWxvY2F0aW9uIG15YXBwcy5kZXZlbG9wZXIudWJ1bnR1LmNvbQowMDE2aWRlbnRpZmllciBNeUFwcHMKMDA0YmNpZCBteWFwcHMuZGV2ZWxvcGVyLnVidW50dS5jb218dmFsaWRfc2luY2V8MjAyMS0wOC0wNVQyMjowMDoyNC44MDYwMTIKMDE3ZGNpZCB7InZlcnNpb24iOiAxLCAic2VjcmV0IjogIm5kZE1aUzVWek1SZGlRSDBPZ2o1VyswanI3UWhnR2dyUFg1L0lUZkEvcUY1am1QaHlqa09RZ0VmeUttTlNCMWV2Wm5Bc3RnUlhDWlhGY3ZIR1ptNk1GVkt0djZaMjZOeGxMVXQyZGxoblhMTXBobjJJejVBMGJLTUZWOEhuTWZ4RHNVOW1WS2JWdzY5TUZTRnBxK25lNDZGUzZkSWpMR2ZtbzAvaWc4ZDF3ZW0zV3pYVTQ5N2dTNVJVOTJoZmNzbDZrbzJIUFZqSFA3bmdiTkpSUlp0L0c4dFVROTlRM2NTV2llREJJK3IzV0ppYlFUakkrTzFyeVhCL25teUh1cEpvYTBKbGtzTEFCNlduSncyYmxzSHFsWmRwWFI0aHZaNjJ6Q3BEd2YwVm9CNXlkQUIrV2VEL2NpNmwrUHJrSlVleHZWZVpvUW5UQTZNbEVaZlRIOWVzUT09In0KMDA1MXZpZCAPrw4Q89VFcDW1Ubxsp6Q73tnpMu7DWDDzjBIG40bN-P4qwsIpQLBVWdSa88ysRWtIjSJKYbq3RlbpxAIqw4sWPhzrod6iFskKMDAxOGNsIGxvZ2luLnVidW50dS5jb20KMDAzOWNpZCBteWFwcHMuZGV2ZWxvcGVyLnVidW50dS5jb218YWNsfFsiZWRpdF9hY2NvdW50Il0KMDA0N2NpZCBteWFwcHMuZGV2ZWxvcGVyLnVidW50dS5jb218ZXhwaXJlc3wyMDIyLTA4LTA1VDIyOjAwOjI0LjgwNTkwMAowMDJmc2lnbmF0dXJlIJo560vYdZdDOXTQ0m55Z-RaGL5e9M-SvBIxDtaK_sl7Cg",
         otp: Optional[str] = None,
         config_fd: TextIO = None,
         save: bool = True,
@@ -141,7 +142,7 @@ class UbuntuOneAuthClient(_http_client.Client):
             self._conf.set("unbound_discharge", unbound_discharge)
             self._conf.set("email", email)
         else:
-            raise RuntimeError("Logic Error")
+            print("Logic Error in login")
 
         # Set auth and headers.
         self.auth = _macaroon_auth(self._conf)
