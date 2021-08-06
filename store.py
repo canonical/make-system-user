@@ -48,21 +48,18 @@ def main():
         headers={"Content-Type": "application/json", "Accept": "application/json"},
     )
 
-    #if response.ok:
-    #    print(json.dumps(response.json(), indent=2))
-    #else:
-    #    print(' mac response error')
-    #    print("mac text", response.text)
+    if not response.ok:
+        print('Error getting macaroon')
+        print(response.text)
+        sys.exit(1)
 
     _macaroon = response.json()["macaroon"]
-    #_email = "ce-team-test@canonical.com"
-    #_password  = "TheLastThingThatHarryToldSally"
+
     _email = input("Ubuntu SSO email address: ")
     _password = getpass.getpass("password: ")
     _otp = input("two factor: ") 
     authClient.login(_email, _password, _macaroon, _otp)
 
-    # sys.exit()
     # get account info
 
     url = "https://dashboard.snapcraft.io/dev/api/account"
@@ -74,13 +71,11 @@ def main():
     )
 
     #print("status code", response.status_code)
-    if response.ok:
-        print(json.dumps(response.json(), indent=2))
-    else:    
-        print('response error')
-        print("text", response.text)
-
-    #print("encoding", response.encoding)
+    if not response.ok:
+        print('Error getting account info')
+        print(response.text)
+        sys.exit(1)
+    print(json.dumps(response.json(), indent=2))
 
 if __name__ == "__main__":
     main()
