@@ -11,12 +11,20 @@ base: core20
 
 apps:
     make-system-user:
-        command: bin/make_system_user
+        command: bin/launch.sh
+        environment: 
+            PYTHONPATH: $SNAP/lib/python3.8/site-packages/
 
 parts:
-    env:
+    make-system-user:
         plugin: python
-        source: .
-        #        override-build: |
-        #    snapcraftctl build
-        #    cp $SNAPCRAFT_PROJECT_DIR/mydirspy $SNAPCRAFT_PART_INSTALL/lib/python3.6/site-packages/snapcraft/internal/dirs.py
+        source: src
+        python-packages: [ argparse, requests, simplejson, pymacaroons, pyxdg ]
+        stage-packages: [ python3-venv ]
+        #override-stage: |
+        #    snapcraftctl stage
+        #    chmod a+x $SNAPCRAFT_STAGE/lib/python3.8/site-packages/make_system_user/__main__.py
+    bin:
+      source: launchers
+      plugin: dump
+
