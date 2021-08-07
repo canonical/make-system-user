@@ -109,7 +109,11 @@ def ssoAccount():
     authClient = http_clients.UbuntuOneAuthClient()
 
     try:
-        authClient.login(_email, _password, _macaroon, _otp)
+        if len(_otp) == 0:
+           authClient.login(_email, _password, _macaroon)
+        else:
+           authClient.login(_email, _password, _macaroon, _otp)
+
     except:
         print("Error: Your login did not succeed")
         return False
