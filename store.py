@@ -23,13 +23,9 @@ import pathlib
 from typing import Optional, TextIO
 from urllib.parse import urljoin, urlparse
 
-import pymacaroons
 import requests
 from simplejson.scanner import JSONDecodeError
-from xdg import BaseDirectory
 
-from http_clients import _config
-from http_clients import  _http_client
 import http_clients
 
 
@@ -75,6 +71,7 @@ def main():
         print('Error getting account info')
         print(response.text)
         sys.exit(1)
+
     f = open("out.json", "w")
     f.write(json.dumps(response.json(), indent=2))
     f.close()
