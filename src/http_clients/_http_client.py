@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 class Client:
     """Generic Client to talk to the *Store."""
 
-    def __init__(self, *, user_agent: str = "test_agent" )-> None:
+    def __init__(self, *, user_agent: str = "make-system-user" )-> None:
         self.session = requests.Session()
         self._user_agent = user_agent
 

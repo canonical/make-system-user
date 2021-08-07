@@ -127,16 +127,13 @@ def ssoAccount():
         headers={"Content-Type": "application/json", "Accept": "application/json", "Authorization": authClient.auth},
     )
 
-    #print("status code", response.status_code)
     if not response.ok:
         print('Error getting account info')
         print(response.text)
         sys.exit(1)
 
-   
-    f = open("out.json", "w")
-    f.write(json.dumps(response.json(), indent=2))
-    f.close()
+    authClient.logout()
+
     return response.json()
 
 def pword_hash(pword):

@@ -18,6 +18,7 @@ import logging
 import json
 import os
 import pathlib
+import sys
 from typing import Optional, Iterable, Dict, TextIO
 from urllib.parse import urljoin, urlparse
 
@@ -96,7 +97,7 @@ class UbuntuOneAuthClient(_http_client.Client):
             and response.headers.get("WWW-Authenticate") == "Macaroon needs_refresh=1"
         )
 
-    def __init__(self, *, user_agent: str = "test_agent") -> None:
+    def __init__(self, *, user_agent: str = "make-system-user") -> None:
         super().__init__(user_agent=user_agent)
 
         self._conf = UbuntuOneSSOConfig()
@@ -104,9 +105,9 @@ class UbuntuOneAuthClient(_http_client.Client):
 
         try:
             self.auth: Optional[str] = _macaroon_auth(self._conf)
-        except errors.InvalidCredentialsError:
-            self.auth = None
-
+        except: 
+            print("Error: please complete 'snapcraft login' and try again.")
+            sys.exit(1)
     def _extract_caveat_id(self, root_macaroon):
         macaroon = pymacaroons.Macaroon.deserialize(root_macaroon)
         # macaroons are all bytes, never strings
