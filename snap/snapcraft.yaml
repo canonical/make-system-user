@@ -21,9 +21,6 @@ parts:
         source: src
         python-packages: [ argparse, requests, simplejson, pymacaroons, pyxdg ]
         stage-packages: [ python3-venv ]
-        #override-stage: |
-        #    snapcraftctl stage
-        #    chmod a+x $SNAPCRAFT_STAGE/lib/python3.8/site-packages/make_system_user/__main__.py
     bin:
       source: launchers
       plugin: dump
