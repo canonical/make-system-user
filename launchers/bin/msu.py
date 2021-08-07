@@ -1,5 +1,5 @@
 """
-Copyright (C) 2017 Canonical Ltd
+Copyright (C) 2021 Canonical Ltd
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License version 3 as
@@ -37,7 +37,7 @@ VERSION = '0.1'
 def parseargs(argv=None):
     parser = argparse.ArgumentParser(
         prog=PROGRAM,
-        description=('Create and sign a system-user assertion using a local snapcraft key that has been registered with an Ubuntu SSO account. This account must have the authority to sign system-user assertions, typically simply by being the Brand Account. The model assertion can delegate such authority. On success, "auto-import.assert" is created in the current directory. If this file is placed on a USB drive and it is inserted into an Ubuntu Core system, and if the system does not already have a system-user, the system user is created.'),
+        description=('Create and sign a system-user assertion using a local snapcraft key that has been registered with an Ubuntu SSO account. This account must have the authority to sign system-user assertions for the Model name you must specify, typically simply by being the Brand Account that signed the Model Assertion. (The Model Assertion can delegate such authority). You must enter the login credentials for this Ubuntu SSO Account. On success, an "auto-import.assert" file is created in the current directory. If this file is placed on a USB drive and it is inserted into an Ubuntu Core system, and if the system does not already have a system-user nor a user created through console-conf, the system user is created with SSH access using the specified authentication. You need to be logged into snapcraft before running this tool ("snapcraft login"). NOTE: After running this tool, you are logged out of snapcraft. Log back into snapcraft with "snapcraft login".'),
         )
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true'
         )
@@ -95,7 +95,7 @@ def get_macaroon():
     if not response.ok:
         print('Error getting macaroon')
         print(response.text)
-        sys.exit(1)
+        exit_msg(1)
 
     return response.json()["macaroon"]
 
@@ -103,8 +103,8 @@ def get_macaroon():
 def ssoAccount():
     _macaroon = get_macaroon()
     _email = input("Ubuntu SSO email address: ")
-    _password = getpass.getpass("password: ")
-    _otp = input("two factor: ")
+    _password = getpass.getpass("Password: ")
+    _otp = input("Second-factor auth: ")
 
     authClient = http_clients.UbuntuOneAuthClient()
 
@@ -130,7 +130,7 @@ def ssoAccount():
     if not response.ok:
         print('Error getting account info')
         print(response.text)
-        sys.exit(1)
+        exit_msg(1)
 
     authClient.logout()
 
@@ -207,7 +207,7 @@ def systemUserJson(account, brand, model, username, until, email):
     data["until"] = getUntil(until, dt, d, t)
     if data["until"] == None:
         print("Error: until value setting failed")
-        sys.exit(1)
+        exit_msg(1)
     y = data["until"].split("-")[0]
     m = data["until"].split("-")[1]
     dy = data["until"].split("-")[2].split("T")[0]
@@ -216,7 +216,7 @@ def systemUserJson(account, brand, model, username, until, email):
         print("Error: until date is not after since date")
         print("since", data["since"])
         print("until", data["until"])
-        sys.exit(1)
+        exit_msg(1)
     return data
 
 def isLocalKey(key):
@@ -239,28 +239,28 @@ def main(argv=None):
     args = parseargs(argv)
     if args.password is None and args.ssh_keys is None:
         print("Error. You must supply either a password or public SSH keys(s).")
-        sys.exit(1)
+        exit_msg(1)
     if args.password is not None and args.ssh_keys is not None:
         print("Error. You cannot use both a password and an ssh key.")
-        sys.exit(1)
+        exit_msg(1)
     if args.force_password_change and args.password is None:
         print("Error. Using --force-password-change also requires --password.")
-        sys.exit(1)
+        exit_msg(1)
     if args.force_password_change and args.ssh_keys is not None:
         print("Error. Using --force-password-change with --ssh-keys is not allowed.")
-        sys.exit(1)
+        exit_msg(1)
 
     # quit if not snapcraft logged in
     account = ssoAccount()
     if not account:
-        sys.exit(1)
+        exit_msg(1)
     # quit if key is not registered
     selfSignKey = key_fingerprint(args.key, account)
     if not selfSignKey:
-        sys.exit(1)
+        exit_msg(1)
     # quit if key does is not local
     if not isLocalKey(args.key):
-        sys.exit(1)
+        exit_msg(1)
 
     if args.verbose:
         print("==== Args and related:")
@@ -314,9 +314,18 @@ def main(argv=None):
     with open(filename, 'w') as out:
         out.write(user)
 
-    print("Done. You may copy {} to a USB stick and insert it into an unmanaged Core system, after which you can log in using the username and password you provided.".format(filename))
+    print("Done. You may copy {} to a USB stick and insert it into an unmanaged Core system, after which you can log in using the credentials you provided.".format(filename))
+    exit_msg(0)
 
-    return 0
+def exit_msg(status):
+    print("\nNOTE: You have been logged out of snapcraft. Please log back in with 'snapcrafft login'")
+    if status == 0:
+        print("Exiting.")
+        sys.exit(0)
+    else:
+        print("Exiting with an error condition.")
+        sys.exit(status)
+
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
