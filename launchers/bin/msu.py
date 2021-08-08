@@ -18,6 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
 import argparse
+import textwrap
+from argparse import RawTextHelpFormatter
 import subprocess
 import crypt
 import json
@@ -36,11 +38,20 @@ VERSION = '0.1'
 
 def parseargs(argv=None):
     parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter,
         prog=PROGRAM,
-        description=('Create and sign a system-user assertion using a local snapcraft key that has been registered with an Ubuntu SSO account. This account must have the authority to sign system-user assertions for the Model name you must specify, typically simply by being the Brand Account that signed the Model Assertion. (The Model Assertion can delegate such authority). You must enter the login credentials for this Ubuntu SSO Account. On success, an "auto-import.assert" file is created in the current directory. If this file is placed on a USB drive and it is inserted into an Ubuntu Core system, and if the system does not already have a system-user nor a user created through console-conf, the system user is created with SSH access using the specified authentication. You need to be logged into snapcraft before running this tool ("snapcraft login"). NOTE: After running this tool, you are logged out of snapcraft. Log back into snapcraft with "snapcraft login".'),
-        )
-    parser.add_argument('-v', '--verbose', dest='verbose', action='store_true'
-        )
+        description=textwrap.dedent('''\
+Create and sign a System-User Assertion using a local snapcraft key that has been registered with an Ubuntu SSO account.
+    * The snapcraft key must have been previously created by the current Linux user (with "snapcraft create-key").
+    * The key must have been registered to an Ubuntu SSO Account account that has the authority to sign System-User Assertions accoding to the Model Assertion whose name you specify (see blelow), or the System User cannot be created later at run time. This Ubuntu SSO Account can be the Brand account or another, if so delegated in the Model Assertion.
+    * You must enter the login credentials for the Ubuntu SSO Account whose registered key is used to sign the System-User Assertion.
+    * You must provide an authentication method for the System User to login later with. This can be either a password or a public SSH key, as described below.
+    * It is good practice to use an "until" time that is in the near future (See below).
+
+    On success, an "auto-import.assert" file is created in the current directory. If this file is placed on a USB drive and it is inserted into an Ubuntu Core system, and if the system has neither a System User nor a user created through console-conf, then the System User is created with SSH access using the specified authentication.'''
+        ))
+    parser.add_argument('-v', '--verbose', dest='verbose', action='store_true')
+    parser.add_argument('-w', '--write', dest='write', action='store_true', help=argparse.SUPPRESS)
     required = parser.add_argument_group('Required arguments')
     required.add_argument('-b', '--brand', required=True,
         help=('The account-id of the account that signed the device\'s model-assertion.')
@@ -83,7 +94,15 @@ def get_macaroon():
     # get macaroon for account
 
     url = "https://dashboard.snapcraft.io/dev/api/acl/"
-    data = {"permissions":["package_access"]}
+    data = {"permissions":[
+                "package_access",
+                "package_manage",
+                "package_push",
+                "package_register",
+                "package_release",
+                "package_update",
+            ]}
+
     # getting macaroon can only be anonymous, so no auth client
     response = requests.request(
         "POST",
@@ -100,7 +119,7 @@ def get_macaroon():
     return response.json()["macaroon"]
 
 
-def ssoAccount():
+def ssoAccount(args):
     _macaroon = get_macaroon()
     _email = input("Ubuntu SSO email address: ")
     _password = getpass.getpass("Password: ")
@@ -117,8 +136,8 @@ def ssoAccount():
     except:
         print("Error: Your login did not succeed")
         return False
-    # get account info
 
+    # get account info
     url = "https://dashboard.snapcraft.io/dev/api/account"
     headers = str
     response = authClient.request(
@@ -132,8 +151,10 @@ def ssoAccount():
         print(response.text)
         exit_msg(1)
 
-    authClient.logout()
-
+    if args.write: 
+        f = open("out.json", "w")
+        f.write(json.dumps(response.json(), indent=2))
+        f.close()
     return response.json()
 
 def pword_hash(pword):
@@ -251,7 +272,7 @@ def main(argv=None):
         exit_msg(1)
 
     # quit if not snapcraft logged in
-    account = ssoAccount()
+    account = ssoAccount(args)
     if not account:
         exit_msg(1)
     # quit if key is not registered
@@ -318,9 +339,9 @@ def main(argv=None):
     exit_msg(0)
 
 def exit_msg(status):
-    print("\nNOTE: You have been logged out of snapcraft. Please log back in with 'snapcrafft login'")
+    print("\nNOTE: You may have been logged out of snapcraft. Please log back in with 'snapcraft login'")
     if status == 0:
-        print("Exiting.")
+        print("\nExiting.")
         sys.exit(0)
     else:
         print("Exiting with an error condition.")
