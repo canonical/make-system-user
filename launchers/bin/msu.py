@@ -339,7 +339,6 @@ def main(argv=None):
     exit_msg(0)
 
 def exit_msg(status):
-    print("\nNOTE: You may have been logged out of snapcraft. Please log back in with 'snapcraft login'")
     if status == 0:
         print("\nExiting.")
         sys.exit(0)
