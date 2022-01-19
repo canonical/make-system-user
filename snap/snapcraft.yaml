@@ -6,19 +6,20 @@ description: Make an auto-import.assert file
   signed by your registered key
 
 grade: stable
-confinement: classic 
+confinement: classic
 base: core20
 
 apps:
     make-system-user:
         command: bin/launch.sh
-        environment: 
+        environment:
             PYTHONPATH: $SNAP/lib/python3.8/site-packages/
 
 parts:
     make-system-user:
         plugin: python
         source: src
+        build-packages: [ libffi-dev ]
         python-packages: [ argparse, requests, simplejson, pymacaroons, pyxdg ]
         stage-packages: [ python3-venv ]
     bin:
