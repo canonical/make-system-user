@@ -70,7 +70,7 @@ Create and sign a System-User Assertion using a local snapcraft key that has bee
         )
     parser.add_argument('--since-days-ago',
         default='2',
-        help=('Optionally specify how many days ago the since field will use, default 2 days.')
+        help=('Optionally specify how many days ago the "since" field will use: default is 2 days. The "since" and the "until" fields define the valid period of the system\'s time: if the system time is not in the valid period, the user is not created from the assertion.')
         )
     parser.add_argument('--until',
         help=('Optionally specify the date until which the system user can be created in the following format: YYYY:MM:DD, for example "2021:02:28" for 28 Feb 2020. If omitted, the value is one year from the "since" date, which is two days before today.')
