@@ -65,16 +65,20 @@ Create and sign a System-User Assertion using a local snapcraft key that has bee
     required.add_argument('-e', '--email', required=True,
         help=('The email address of the login.ubuntu.com account to be created on the device.')
         )
-    parser.add_argument('-p', '--password', 
+    parser.add_argument('-p', '--password',
         help=('The password of the account to be created on the device. This password is not saved. Either this or --ssh-keys is required.')
         )
-    parser.add_argument('--until', 
+    parser.add_argument('--since-days-ago',
+        default='2',
+        help=('Optionally specify how many days ago the "since" field will use: default is 2 days. The "since" and the "until" fields define the valid period of the system\'s time: if the system time is not in the valid period, the user is not created from the assertion.')
+        )
+    parser.add_argument('--until',
         help=('Optionally specify the date until which the system user can be created in the following format: YYYY:MM:DD, for example "2021:02:28" for 28 Feb 2020. If omitted, the value is one year from the "since" date, which is two days before today.')
         )
-    parser.add_argument('--serials', nargs='+',  
+    parser.add_argument('--serials', nargs='+',
         help=('Optionally add one or more serial numbers to limit creation of a system-user to a system of one of the specified serial numbers. Use a space to delimit them. For example: --serial-numbers \'123abc\' \'zyx321abc\'.')
         )
-    parser.add_argument('-f', '--force-password-change', 
+    parser.add_argument('-f', '--force-password-change',
         default=False,
         action="store_true",
         help=('Force the user to change the password on first use. --password flag required.')
@@ -151,15 +155,15 @@ def ssoAccount(args):
         print(response.text)
         exit_msg(1)
 
-    if args.write: 
+    if args.write:
         f = open("out.json", "w")
         f.write(json.dumps(response.json(), indent=2))
         f.close()
     return response.json()
 
 def pword_hash(pword):
-    return crypt.crypt(pword, crypt.mksalt(crypt.METHOD_SHA512))                                                 
-def key_fingerprint(key, account):    
+    return crypt.crypt(pword, crypt.mksalt(crypt.METHOD_SHA512))
+def key_fingerprint(key, account):
     # ensure store reports key
     if len(account['account_keys']) > 0:
         for k in account['account_keys']:
@@ -174,7 +178,7 @@ def accountAssert(id):
     signed = str(res,'utf-8')
     if "type: account\n" not in signed:
         print("Error: problems getting assertion for this account")
-        return False 
+        return False
     return(signed)
 
 def accountKeyAssert(id):
@@ -206,7 +210,7 @@ def getUntil(argsuntil, dt, d, t):
         until = d2 + 'T00:00:00-00:01'
     return(until)
 
-def systemUserJson(account, brand, model, username, until, email):
+def systemUserJson(account, brand, model, username, since_days_ago, until, email):
     data = dict()
     data["type"] = "system-user"
     data["authority-id"] = account
@@ -218,13 +222,15 @@ def systemUserJson(account, brand, model, username, until, email):
     data["email"] = email
     data["revision"] = "1"
 
+    # We default to since of 2 days ago if not provided
+    since_delta = 2 if since_days_ago == None else since_days_ago
     ts = time.time()
     dt = datetime.fromtimestamp(ts)
-    dt = dt - timedelta(days=2)   
+    dt = dt - timedelta(days=since_delta)
     d = dt.strftime('%Y-%m-%d')
     t = dt.strftime('%H:%M:%S')
     since = d + 'T00:00:00-00:01'
-    data["since"] = since 
+    data["since"] = since
     data["until"] = getUntil(until, dt, d, t)
     if data["until"] == None:
         print("Error: until value setting failed")
@@ -270,6 +276,9 @@ def main(argv=None):
     if args.force_password_change and args.ssh_keys is not None:
         print("Error. Using --force-password-change with --ssh-keys is not allowed.")
         exit_msg(1)
+    if args.since_days_ago is not None and not args.since_days_ago.isdigit():
+        print("Error. --since-days-ago must be an integer.")
+        exit_msg(1)
 
     # quit if not snapcraft logged in
     account = ssoAccount(args)
@@ -296,19 +305,20 @@ def main(argv=None):
         print("Account-Id: ", json.dumps(account, sort_keys=True, indent=4))
         print("Key: ", args.key)
         print("Key Fingerprint: ", selfSignKey)
+        print("Since days ago: ", args.since_days_ago)
         print("")
 
-    accountSigned = accountAssert(account['account_id']) 
+    accountSigned = accountAssert(account['account_id'])
     if args.verbose:
         print("==== Account signed:")
         print(accountSigned)
 
-    accountKeySigned = accountKeyAssert(selfSignKey) 
+    accountKeySigned = accountKeyAssert(selfSignKey)
     if args.verbose:
         print("==== Account Key signed:")
         print(accountKeySigned)
-    
-    userJson = systemUserJson(account['account_id'], args.brand, args.model, args.username, args.until, args.email)
+
+    userJson = systemUserJson(account['account_id'], args.brand, args.model, args.username, int(args.since_days_ago), args.until, args.email)
     if args.password:
         userJson["password"] = pword_hash(args.password)
         if args.force_password_change:
@@ -323,7 +333,7 @@ def main(argv=None):
     if args.verbose:
         print("==== system-user json:")
         print(json.dumps(userJson, sort_keys=True, indent=4))
-    
+
     userSigned = signUser(userJson, args.key)
 
     user = accountSigned + "\n" + accountKeySigned + "\n" + userSigned
