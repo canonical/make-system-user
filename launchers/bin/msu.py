@@ -68,6 +68,10 @@ Create and sign a System-User Assertion using a local snapcraft key that has bee
     parser.add_argument('-p', '--password',
         help=('The password of the account to be created on the device. This password is not saved. Either this or --ssh-keys is required.')
         )
+    parser.add_argument('--since-days-ago',
+        default='2',
+        help=('Optionally specify how many days ago the "since" field will use: default is 2 days. The "since" and the "until" fields define the valid period of the system\'s time: if the system time is not in the valid period, the user is not created from the assertion.')
+        )
     parser.add_argument('--until',
         help=('Optionally specify the date until which the system user can be created in the following format: YYYY:MM:DD, for example "2021:02:28" for 28 Feb 2020. If omitted, the value is one year from the "since" date, which is two days before today.')
         )
@@ -211,7 +215,7 @@ def getUntil(argsuntil, dt, d, t):
         until = d2 + 'T00:00:00-00:01'
     return(until)
 
-def systemUserJson(account, brand, model, username, until, email):
+def systemUserJson(account, brand, model, username, since_days_ago, until, email):
     data = dict()
     data["type"] = "system-user"
     data["authority-id"] = account
@@ -223,9 +227,11 @@ def systemUserJson(account, brand, model, username, until, email):
     data["email"] = email
     data["revision"] = "1"
 
+    # We default to since of 2 days ago if not provided
+    since_delta = 2 if since_days_ago == None else since_days_ago
     ts = time.time()
     dt = datetime.fromtimestamp(ts)
-    dt = dt - timedelta(days=2)
+    dt = dt - timedelta(days=since_delta)
     d = dt.strftime('%Y-%m-%d')
     t = dt.strftime('%H:%M:%S')
     since = d + 'T00:00:00-00:01'
@@ -285,6 +291,9 @@ def main(argv=None):
     if args.force_password_change and args.ssh_keys is not None:
         print("Error. Using --force-password-change with --ssh-keys is not allowed.")
         exit_msg(1)
+    if args.since_days_ago is not None and not args.since_days_ago.isdigit():
+        print("Error. --since-days-ago must be an integer.")
+        exit_msg(1)
 
     account_id = None
     selfSignKey = None
@@ -328,6 +337,7 @@ def main(argv=None):
         print("Account-Id: ", account_id)
         print("Key: ", args.key)
         print("Key Fingerprint: ", selfSignKey)
+        print("Since days ago: ", args.since_days_ago)
         print("")
 
     accountSigned = accountAssert(account_id)
@@ -340,7 +350,7 @@ def main(argv=None):
         print("==== Account Key signed:")
         print(accountKeySigned)
 
-    userJson = systemUserJson(account_id, args.brand, args.model, args.username, args.until, args.email)
+    userJson = systemUserJson(account_id, args.brand, args.model, args.username, int(args.since_days_ago), args.until, args.email)
     if args.password:
         userJson["password"] = pword_hash(args.password)
         if args.force_password_change:
