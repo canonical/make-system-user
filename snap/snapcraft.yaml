@@ -7,7 +7,7 @@ description: Make an auto-import.assert file
 
 grade: stable
 confinement: classic
-base: core20
+base: core22
 
 apps:
     make-system-user:
