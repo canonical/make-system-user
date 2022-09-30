@@ -89,11 +89,20 @@ Create and sign a System-User Assertion using a local snapcraft key that has bee
     required.add_argument('-k', '--key', required=True,
         help=('The name of the snapcraft key to use to sign the system user assertion. The key must exist locally and be reported by "snapcraft keys". The key must also be registered.')
         )
-    parser.add_argument('--no-login',
+    # Only show these options if user has explictly said they want to see these options. You should
+    # know what you are doing before using them
+    parser.add_argument('--unsupported',
         default=False,
         action="store_true",
-        help=('Does not require user to provide brand account credentials. Uses Brand ID and local key signature with no verification.')
+        help=('Allow using dangerous and unsupported options. You should know what you are doing before using them.')
         )
+    if "--unsupported" in sys.argv:
+        parser.add_argument('--no-login',
+            default=False,
+            action="store_true",
+            help=('Does not require user to provide brand account credentials. Uses Brand ID and local key signature with no verification. The key should be registered to the brand account otherwise bad things will happen. Use --unsupported option to use.')
+            )
+
     args = parser.parse_args()
     return args
 
