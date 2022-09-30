@@ -89,6 +89,20 @@ Create and sign a System-User Assertion using a local snapcraft key that has bee
     required.add_argument('-k', '--key', required=True,
         help=('The name of the snapcraft key to use to sign the system user assertion. The key must exist locally and be reported by "snapcraft keys". The key must also be registered.')
         )
+    # Only show these options if user has explictly said they want to see these options. You should
+    # know what you are doing before using them
+    parser.add_argument('--unsupported',
+        default=False,
+        action="store_true",
+        help=('Allow using dangerous and unsupported options. You should know what you are doing before using them.')
+        )
+    if "--unsupported" in sys.argv:
+        parser.add_argument('--no-login',
+            default=False,
+            action="store_true",
+            help=('Does not require user to provide brand account credentials. Uses Brand ID and local key signature with no verification. The key should be registered to the brand account otherwise bad things will happen. Use --unsupported option to use.')
+            )
+
     args = parser.parse_args()
     return args
 
@@ -256,6 +270,16 @@ def isLocalKey(key):
     print("Error: key '{}' is not a local key. Please use snapcraft create-key' and then 'snapcraft register-key'".format(key))
     return False
 
+def local_key_fingerprint(key):
+    cmd = ['snap', 'keys']
+    res = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
+    lines = str(res,'utf-8').split('\n')
+    for line in lines:
+        if key in line:
+            return line.split()[1]
+    print("Error: key '{}' is not a local key. Please use snapcraft create-key' and then 'snapcraft register-key'".format(key))
+    return None
+
 def signUser(userJson, key):
     cmd = "echo '" + json.dumps(userJson) + "'| snap sign -k " + key
     res = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE).communicate()[0]
@@ -280,16 +304,32 @@ def main(argv=None):
         print("Error. --since-days-ago must be an integer.")
         exit_msg(1)
 
-    # quit if not snapcraft logged in
-    account = ssoAccount(args)
-    if not account:
+    account_id = None
+    selfSignKey = None
+
+    if args.no_login:
+        # Account ID is brand ID and key SHA3-384 hash comes from local key info
+        account_id = args.brand
+        # If there is no local by the name, returns None
+        selfSignKey = local_key_fingerprint(args.key)
+    else:
+        # quit if key does is not local
+        if not isLocalKey(args.key):
+            exit_msg(1)
+
+        # quit if not snapcraft logged in
+        account = ssoAccount(args)
+        if not account:
+            exit_msg(1)
+
+        account_id = account['account_id']
+        # quit if key is not registered
+        selfSignKey = key_fingerprint(args.key, account)
+
+    # account ID and key SHA3-384 hash is required to continue
+    if not account_id:
         exit_msg(1)
-    # quit if key is not registered
-    selfSignKey = key_fingerprint(args.key, account)
     if not selfSignKey:
-        exit_msg(1)
-    # quit if key does is not local
-    if not isLocalKey(args.key):
         exit_msg(1)
 
     if args.verbose:
@@ -302,13 +342,14 @@ def main(argv=None):
         print("Email", args.email)
         print("SSH", args.ssh_keys)
         print("ForcePasswordChange", args.force_password_change)
-        print("Account-Id: ", json.dumps(account, sort_keys=True, indent=4))
+        print("NoLogin: ", args.no_login)
+        print("Account-Id: ", account_id)
         print("Key: ", args.key)
         print("Key Fingerprint: ", selfSignKey)
         print("Since days ago: ", args.since_days_ago)
         print("")
 
-    accountSigned = accountAssert(account['account_id'])
+    accountSigned = accountAssert(account_id)
     if args.verbose:
         print("==== Account signed:")
         print(accountSigned)
@@ -318,7 +359,7 @@ def main(argv=None):
         print("==== Account Key signed:")
         print(accountKeySigned)
 
-    userJson = systemUserJson(account['account_id'], args.brand, args.model, args.username, int(args.since_days_ago), args.until, args.email)
+    userJson = systemUserJson(account_id, args.brand, args.model, args.username, int(args.since_days_ago), args.until, args.email)
     if args.password:
         userJson["password"] = pword_hash(args.password)
         if args.force_password_change:
