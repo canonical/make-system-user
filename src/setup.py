@@ -19,7 +19,7 @@ from os import path
 
 setup(
     name='make-system-user',
-    version='12',
+    version='14',
     description='make-system-user creates system user assertion files for Ubuntu Core',
     packages=["http_clients"],
     project_urls={
