@@ -86,6 +86,11 @@ Create and sign a System-User Assertion using a local snapcraft key that has bee
     parser.add_argument('-s', '--ssh-keys', nargs="+",
         help=('Optionally add one or more public ssh keys to use for SSH using the system user to be created on the device. Either this or --password is required. Enclosed each key string in single quotes. Use a space to delimit them. For example: --ssh-keys \'key one\' \'key two\'.')
         )
+    parser.add_argument('-r', '--revision',
+        default=1,
+        help=('Optionally specify the revison number of the system user assertion.'),
+        type=int
+        )
     required.add_argument('-k', '--key', required=True,
         help=('The name of the snapcraft key to use to sign the system user assertion. The key must exist locally and be reported by "snapcraft keys". The key must also be registered.')
         )
@@ -210,7 +215,7 @@ def getUntil(argsuntil, dt, d, t):
         until = d2 + 'T00:00:00-00:01'
     return(until)
 
-def systemUserJson(account, brand, model, username, since_days_ago, until, email):
+def systemUserJson(account, brand, model, username, since_days_ago, until, email, revision):
     data = dict()
     data["type"] = "system-user"
     data["authority-id"] = account
@@ -220,7 +225,7 @@ def systemUserJson(account, brand, model, username, since_days_ago, until, email
     data["name"] = username + " User"
     data["username"] = username
     data["email"] = email
-    data["revision"] = "1"
+    data["revision"] = str(revision)
 
     # We default to since of 2 days ago if not provided
     since_delta = 2 if since_days_ago == None else since_days_ago
@@ -306,6 +311,7 @@ def main(argv=None):
         print("Key: ", args.key)
         print("Key Fingerprint: ", selfSignKey)
         print("Since days ago: ", args.since_days_ago)
+        print("Revision: ", args.revision)
         print("")
 
     accountSigned = accountAssert(account['account_id'])
@@ -318,7 +324,7 @@ def main(argv=None):
         print("==== Account Key signed:")
         print(accountKeySigned)
 
-    userJson = systemUserJson(account['account_id'], args.brand, args.model, args.username, int(args.since_days_ago), args.until, args.email)
+    userJson = systemUserJson(account['account_id'], args.brand, args.model, args.username, int(args.since_days_ago), args.until, args.email, args.revision)
     if args.password:
         userJson["password"] = pword_hash(args.password)
         if args.force_password_change:
